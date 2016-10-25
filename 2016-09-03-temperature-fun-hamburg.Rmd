@@ -1,0 +1,184 @@
+---
+title: "Temperature fun in Hamburg"
+layout: Rmd
+author: Christopher Floess
+output:
+  # pdf_document: default
+  html_document:
+    default: true
+    self_contained: false
+    keep_md: yes
+    mathjax: default
+references:
+- id: rhelp
+  title: 'R: A Language and Environment for Statistical Computing'
+  author:
+  - family: The R Core Team
+  URL: 'https://cran.r-project.org/doc/manuals/r-release/fullrefman.pdf'
+  issued:
+    year: 2015
+    month: 12
+
+---
+
+Looking at data collected from the [DWD Weste site](http://www.dwd.de/DE/leistungen/weste/westexl/weste_xl.html?nn=342632)
+
+```{R)
+install.packages('weathermetrics')
+install.packages('dplyr')
+install.packages('ggplot2')
+```
+
+```{R, cache  = T}
+# install.packages('weathermetrics')
+library(weathermetrics)
+library(dplyr)
+library(ggplot2)
+```
+
+## Read and combine the data
+
+Four files with identical data structures over the past 40 years or so.
+
+```{R, cache = T}
+dwd1 <- read.csv2("assets/weste_product_2016_08_28__09_58_19.csv")
+dwd2 <- read.csv2("assets/weste_product_2016_08_28__10_05_34.csv")
+dwd3 <- read.csv2("assets/weste_product_2016_08_28__10_09_10.csv")
+dwd4 <- read.csv2("assets/weste_product_2016_08_28__10_13_44.csv")
+dwd5 <- read.csv2("assets//weste_product_2016_09_25__08_06_59.csv")
+dwdHamburg <- rbind(dwd1, dwd2, dwd3, dwd4, dwd5)
+```
+
+## Clean up the data
+
+```{R}
+str(dwdHamburg)
+
+```
+
+There are two types of data collected.
+
+```{R}
+levels(dwdHamburg$Element)
+```
+
+
+"Datum" should be of type `Date`
+
+```{R}
+dwdHamburg$Datum <- as.Date(dwdHamburg$Datum)
+```
+
+Since we'll be working with monthly aggregates over years, let's add a "year" column and a "month" column that represents the year and month of each value
+
+```{R}
+dwdHamburg$mYear <- as.factor(format(dwdHamburg$Datum, format = "%Y"))
+dwdHamburg$mYearMonth <- as.factor(format(dwdHamburg$Datum, format = "%Y-%m"))
+dwdHamburg$mMonth <- as.factor(format(dwdHamburg$Datum, format = "%m"))
+```
+
+In the web interface, it looked like there were some gaps in the years. Specifically in the 1950s it looked like only even numbered years.
+
+```{R}
+levels(as.factor(format(dwdHamburg$Datum, format = "%Y")))
+```
+
+One more sanity check. The years should all have about the same number of days.
+
+```{R}
+dwdHamburg %>%
+  group_by(mYear) %>%
+  summarise(no_rows = length(mYear))
+```
+
+So, looks good. The first year is incomplete because we started in August, but with two factors 730 is the right amount of values for a normal year while 732 corresponds to a leap year.
+
+## Average Temperature by year
+
+```{R average-temperature-by-year, cache = T, fig.width = 7, fig.height = 3}
+dwdTemps <- filter(dwdHamburg, Element == "Lufttemperatur Tagesmittel")
+annualAverages <- aggregate(Wert~mYear, data = dwdTemps, FUN=mean, simplify = F)
+annualAverages$Wert <- as.numeric(annualAverages$Wert)
+g <- ggplot(data=annualAverages) +
+  geom_point() +
+  aes(x=mYear, y=Wert) +
+  coord_fixed(ratio = 5) +
+  scale_y_continuous(name = "Degrees C°") +
+  scale_x_discrete(name = "Year",
+                   breaks=seq(from=1950, to=2020, by=5)) +
+  ggtitle("Average annual 1952-2015")
+#g <- g + theme(plot.background=element_rect(fill="darkseagreen"))
+g
+```
+
+## Average by Month and Year
+
+```{R, cache = T}
+dwdTemps <- filter(dwdHamburg, Element == "Lufttemperatur Tagesmittel")
+monthlyAverages <- aggregate(Wert~mYear+mMonth, data = dwdTemps, FUN=mean, simplify = F)
+monthlyAverages$Wert <- as.numeric(monthlyAverages$Wert)
+mHistoricMonthlyAverage <- monthlyAverages[["mMonth"]]
+```
+
+We now take the historic monthly average for all of germany as taken from [wikipedia](https://de.wikipedia.org/wiki/Zeitreihe_der_Lufttemperatur_in_Deutschland#Durchschnittswerte_.C3.BCber_unterschiedliche_Zeitperioden) and compare it to the monthly averages recorded in Hamburg.
+
+We do this by duplicating the `mMonth` column and assigning the
+`historicMonthlyAverages` levels to this column. These levels are the
+temperatures taken from the wikipedia page. We then convert the factor levels,
+first to a `string`, and then to a `numeric` and add a new column for the difference of the recorded monthly average and the historic monthly average
+
+```{R, cache = T}
+# taken from https://de.wikipedia.org/wiki/Zeitreihe_der_Lufttemperatur_in_Deutschland#Durchschnittswerte_.C3.BCber_unterschiedliche_Zeitperioden
+historicMonthlyAverages <- c(-0.4, 0.3, 3.6, 7.7, 12.4, 15.5, 17.3, 16.6, 13.3, 8.6, 4.0, 0.9)
+
+monthlyAverages <- cbind(monthlyAverages, mHistoricMonthlyAverage)
+
+historicMonthlyAveragesFactor <- factor(historicMonthlyAverages)
+levels(monthlyAverages$mHistoricMonthlyAverage) <- historicMonthlyAveragesFactor
+monthlyAverages$mHistoricMonthlyAverage <- as.character(monthlyAverages$mHistoricMonthlyAverage)
+monthlyAverages$mHistoricMonthlyAverage <- as.numeric(monthlyAverages$mHistoricMonthlyAverage)
+
+deviationFromNormal <- -1*(monthlyAverages$mHistoricMonthlyAverage - monthlyAverages$Wert)
+monthlyAverages <- cbind(monthlyAverages, deviationFromNormal)
+```
+
+```{R monthly-averages-by-year, cache = T}
+g <- ggplot(data=monthlyAverages) +
+  scale_color_gradient2(low="blue", high="red", mid = "white", midpoint = 0) +
+  geom_point(shape = 15) +
+  aes(x=mMonth, y=mYear, color = deviationFromNormal) +
+  scale_y_discrete(name = "Year",
+                   breaks=seq(from=1950, to=2020, by=5)) +
+  ggtitle("Monthly Average Temperature by Year")
+g
+```
+
+## Dewpoint by year
+
+```{R dewpoint-by-year, cache = T, fig.width = 7, fig.height = 3}
+dwdTemps <- filter(dwdHamburg, Element == "Lufttemperatur Tagesmittel")
+dwdHumidity <- filter(dwdHamburg, Element == "Relative Luftfeuchte")
+annualAverageTemps <- aggregate(Wert~mYear, data = dwdTemps, FUN=mean, simplify = F)
+annualAverageTemps$Wert <- as.numeric(annualAverageTemps$Wert)
+annualAverageTemps$Temp <- annualAverageTemps$Wert
+
+annualAverageHumidities <- aggregate(Wert~mYear, data = dwdHumidity, FUN=mean, simplify = F)
+annualAverageHumidities$Humidity <- as.numeric(annualAverageHumidities$Wert)
+Humidity <- as.numeric(annualAverageHumidities$Wert)
+
+annualAverageHumiditiesAndTemps <- cbind(annualAverageTemps, Humidity)
+
+annualAverageHumiditiesAndTemps$dewPoint <- humidity.to.dewpoint(
+  rh=annualAverageHumiditiesAndTemps$Humidity,
+  t=annualAverageHumiditiesAndTemps$Temp,
+  temperature.metric = "celsius")
+g <- ggplot(data=annualAverageHumiditiesAndTemps) +
+  geom_point() +
+  aes(x=mYear, y=dewPoint) +
+  coord_fixed(ratio = 5) +
+  scale_y_continuous(name = "Dewpoint, Degrees C°") +
+  scale_x_discrete(name = "Year",
+                   breaks=seq(from=1950, to=2020, by=5)) +
+  ggtitle("Average annual 1952-2015")
+g
+```
