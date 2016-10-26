@@ -23,7 +23,7 @@ references:
 
 Looking at data collected from the [DWD Weste site](http://www.dwd.de/DE/leistungen/weste/westexl/weste_xl.html?nn=342632)
 
-```{R)
+```{R}
 install.packages('weathermetrics')
 install.packages('dplyr')
 install.packages('ggplot2')
@@ -111,7 +111,7 @@ g <- ggplot(data=annualAverages) +
 g
 ```
 
-## Average by Month and Year
+## Average Temperature by Month and Year
 
 ```{R, cache = T}
 dwdTemps <- filter(dwdHamburg, Element == "Lufttemperatur Tagesmittel")
@@ -143,13 +143,16 @@ monthlyAverages <- cbind(monthlyAverages, deviationFromNormal)
 ```
 
 ```{R monthly-averages-by-year, cache = T}
+legendLabel <- "Temp. ± C°"
+Encoding(legendLabel) <- "UTF-8"
 g <- ggplot(data=monthlyAverages) +
   scale_color_gradient2(low="blue", high="red", mid = "white", midpoint = 0) +
   geom_point(shape = 15) +
   aes(x=mMonth, y=mYear, color = deviationFromNormal) +
   scale_y_discrete(name = "Year",
                    breaks=seq(from=1950, to=2020, by=5)) +
-  ggtitle("Monthly Average Temperature by Year")
+  labs(colour = legendLabel)
+  theme(legend.title = element_text("Monthly Average Temperature by Year"))
 g
 ```
 
