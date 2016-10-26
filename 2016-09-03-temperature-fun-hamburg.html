@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Christopher Floess" />
+
+
+<title>Temperature fun in Hamburg</title>
+
+<script src="2016-09-03-temperature-fun-hamburg_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="2016-09-03-temperature-fun-hamburg_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="2016-09-03-temperature-fun-hamburg_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="2016-09-03-temperature-fun-hamburg_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="2016-09-03-temperature-fun-hamburg_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<link rel="stylesheet"
+      href="2016-09-03-temperature-fun-hamburg_files/highlight/default.css"
+      type="text/css" />
+<script src="2016-09-03-temperature-fun-hamburg_files/highlight/highlight.js"></script>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script src="2016-09-03-temperature-fun-hamburg_files/navigation-1.1/tabsets.js"></script>
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Temperature fun in Hamburg</h1>
+<h4 class="author"><em>Christopher Floess</em></h4>
+
+</div>
+
+
+<p>Looking at data collected from the <a href="http://www.dwd.de/DE/leistungen/weste/westexl/weste_xl.html?nn=342632">DWD Weste site</a></p>
+<pre class="r"><code>install.packages(&#39;weathermetrics&#39;)</code></pre>
+<pre><code>## Installing package into &#39;/home/chris/R/x86_64-pc-linux-gnu-library/3.3&#39;
+## (as &#39;lib&#39; is unspecified)</code></pre>
+<pre class="r"><code>install.packages(&#39;dplyr&#39;)</code></pre>
+<pre><code>## Installing package into &#39;/home/chris/R/x86_64-pc-linux-gnu-library/3.3&#39;
+## (as &#39;lib&#39; is unspecified)</code></pre>
+<pre class="r"><code>install.packages(&#39;ggplot2&#39;)</code></pre>
+<pre><code>## Installing package into &#39;/home/chris/R/x86_64-pc-linux-gnu-library/3.3&#39;
+## (as &#39;lib&#39; is unspecified)</code></pre>
+<pre class="r"><code># install.packages(&#39;weathermetrics&#39;)
+library(weathermetrics)
+library(dplyr)
+library(ggplot2)</code></pre>
+<div id="read-and-combine-the-data" class="section level2">
+<h2>Read and combine the data</h2>
+<p>Four files with identical data structures over the past 40 years or so.</p>
+<pre class="r"><code>dwd1 &lt;- read.csv2(&quot;assets/weste_product_2016_08_28__09_58_19.csv&quot;)
+dwd2 &lt;- read.csv2(&quot;assets/weste_product_2016_08_28__10_05_34.csv&quot;)
+dwd3 &lt;- read.csv2(&quot;assets/weste_product_2016_08_28__10_09_10.csv&quot;)
+dwd4 &lt;- read.csv2(&quot;assets/weste_product_2016_08_28__10_13_44.csv&quot;)
+dwd5 &lt;- read.csv2(&quot;assets//weste_product_2016_09_25__08_06_59.csv&quot;)
+dwdHamburg &lt;- rbind(dwd1, dwd2, dwd3, dwd4, dwd5)</code></pre>
+</div>
+<div id="clean-up-the-data" class="section level2">
+<h2>Clean up the data</h2>
+<pre class="r"><code>str(dwdHamburg)</code></pre>
+<pre><code>## &#39;data.frame&#39;:    46030 obs. of  12 variables:
+##  $ Element          : Factor w/ 2 levels &quot;Lufttemperatur Tagesmittel&quot;,..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ Messstation      : Factor w/ 1 level &quot;Hamburg-Fuhlsb\303\274ttel&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ Datum            : Factor w/ 23011 levels &quot;2003-08-01&quot;,&quot;2003-08-02&quot;,..: 1 2 3 4 5 6 7 8 9 10 ...
+##  $ Wert             : num  23.6 23.2 22.3 21.4 20.9 20.8 23.3 24.8 24.8 23.8 ...
+##  $ Einheit          : Factor w/ 2 levels &quot;%&quot;,&quot;Grad C&quot;: 2 2 2 2 2 2 2 2 2 2 ...
+##  $ Geo.Breite..Grad.: num  53.6 53.6 53.6 53.6 53.6 ...
+##  $ Geo.L..nge..Grad.: num  9.99 9.99 9.99 9.99 9.99 ...
+##  $ H..he..m.        : int  11 11 11 11 11 11 11 11 11 11 ...
+##  $ Sensorh..he..m.  : Factor w/ 1 level &quot;keine Daten vorhanden&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ Erstellungsdatum : Factor w/ 2 levels &quot;2016-08-28&quot;,&quot;2016-09-25&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ Copyright        : Factor w/ 1 level &quot;\302\251 Deutscher Wetterdienst 2016&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ X                : logi  NA NA NA NA NA NA ...</code></pre>
+<p>There are two types of data collected.</p>
+<pre class="r"><code>levels(dwdHamburg$Element)</code></pre>
+<pre><code>## [1] &quot;Lufttemperatur Tagesmittel&quot; &quot;Relative Luftfeuchte&quot;</code></pre>
+<p>“Datum” should be of type <code>Date</code></p>
+<pre class="r"><code>dwdHamburg$Datum &lt;- as.Date(dwdHamburg$Datum)</code></pre>
+<p>Since we’ll be working with monthly aggregates over years, let’s add a “year” column and a “month” column that represents the year and month of each value</p>
+<pre class="r"><code>dwdHamburg$mYear &lt;- as.factor(format(dwdHamburg$Datum, format = &quot;%Y&quot;))
+dwdHamburg$mYearMonth &lt;- as.factor(format(dwdHamburg$Datum, format = &quot;%Y-%m&quot;))
+dwdHamburg$mMonth &lt;- as.factor(format(dwdHamburg$Datum, format = &quot;%m&quot;))</code></pre>
+<p>In the web interface, it looked like there were some gaps in the years. Specifically in the 1950s it looked like only even numbered years.</p>
+<pre class="r"><code>levels(as.factor(format(dwdHamburg$Datum, format = &quot;%Y&quot;)))</code></pre>
+<pre><code>##  [1] &quot;1952&quot; &quot;1953&quot; &quot;1954&quot; &quot;1955&quot; &quot;1956&quot; &quot;1957&quot; &quot;1958&quot; &quot;1959&quot; &quot;1960&quot; &quot;1961&quot;
+## [11] &quot;1962&quot; &quot;1963&quot; &quot;1964&quot; &quot;1965&quot; &quot;1966&quot; &quot;1967&quot; &quot;1968&quot; &quot;1969&quot; &quot;1970&quot; &quot;1971&quot;
+## [21] &quot;1972&quot; &quot;1973&quot; &quot;1974&quot; &quot;1975&quot; &quot;1976&quot; &quot;1977&quot; &quot;1978&quot; &quot;1979&quot; &quot;1980&quot; &quot;1981&quot;
+## [31] &quot;1982&quot; &quot;1983&quot; &quot;1984&quot; &quot;1985&quot; &quot;1986&quot; &quot;1987&quot; &quot;1988&quot; &quot;1989&quot; &quot;1990&quot; &quot;1991&quot;
+## [41] &quot;1992&quot; &quot;1993&quot; &quot;1994&quot; &quot;1995&quot; &quot;1996&quot; &quot;1997&quot; &quot;1998&quot; &quot;1999&quot; &quot;2000&quot; &quot;2001&quot;
+## [51] &quot;2002&quot; &quot;2003&quot; &quot;2004&quot; &quot;2005&quot; &quot;2006&quot; &quot;2007&quot; &quot;2008&quot; &quot;2009&quot; &quot;2010&quot; &quot;2011&quot;
+## [61] &quot;2012&quot; &quot;2013&quot; &quot;2014&quot; &quot;2015&quot;</code></pre>
+<p>One more sanity check. The years should all have about the same number of days.</p>
+<pre class="r"><code>dwdHamburg %&gt;%
+  group_by(mYear) %&gt;%
+  summarise(no_rows = length(mYear))</code></pre>
+<pre><code>## # A tibble: 64 &lt;U+00D7&gt; 2
+##     mYear no_rows
+##    &lt;fctr&gt;   &lt;int&gt;
+## 1    1952     306
+## 2    1953     730
+## 3    1954     730
+## 4    1955     730
+## 5    1956     732
+## 6    1957     730
+## 7    1958     730
+## 8    1959     730
+## 9    1960     732
+## 10   1961     730
+## # ... with 54 more rows</code></pre>
+<p>So, looks good. The first year is incomplete because we started in August, but with two factors 730 is the right amount of values for a normal year while 732 corresponds to a leap year.</p>
+</div>
+<div id="average-temperature-by-year" class="section level2">
+<h2>Average Temperature by year</h2>
+<pre class="r"><code>dwdTemps &lt;- filter(dwdHamburg, Element == &quot;Lufttemperatur Tagesmittel&quot;)
+annualAverages &lt;- aggregate(Wert~mYear, data = dwdTemps, FUN=mean, simplify = F)
+annualAverages$Wert &lt;- as.numeric(annualAverages$Wert)
+g &lt;- ggplot(data=annualAverages) +
+  geom_point() +
+  aes(x=mYear, y=Wert) +
+  coord_fixed(ratio = 5) +
+NA
+  scale_x_discrete(name = &quot;Year&quot;,
+                   breaks=seq(from=1950, to=2020, by=5)) +
+  ggtitle(&quot;Average annual 1952-2015&quot;)
+#g &lt;- g + theme(plot.background=element_rect(fill=&quot;darkseagreen&quot;))
+g</code></pre>
+<p><img src="2016-09-03-temperature-fun-hamburg_files/figure-html/average-temperature-by-year-1.png" /><!-- --></p>
+</div>
+<div id="average-temperature-by-month-and-year" class="section level2">
+<h2>Average Temperature by Month and Year</h2>
+<pre class="r"><code>dwdTemps &lt;- filter(dwdHamburg, Element == &quot;Lufttemperatur Tagesmittel&quot;)
+monthlyAverages &lt;- aggregate(Wert~mYear+mMonth, data = dwdTemps, FUN=mean, simplify = F)
+monthlyAverages$Wert &lt;- as.numeric(monthlyAverages$Wert)
+mHistoricMonthlyAverage &lt;- monthlyAverages[[&quot;mMonth&quot;]]</code></pre>
+<p>We now take the historic monthly average for all of germany as taken from <a href="https://de.wikipedia.org/wiki/Zeitreihe_der_Lufttemperatur_in_Deutschland#Durchschnittswerte_.C3.BCber_unterschiedliche_Zeitperioden">wikipedia</a> and compare it to the monthly averages recorded in Hamburg.</p>
+<p>We do this by duplicating the <code>mMonth</code> column and assigning the <code>historicMonthlyAverages</code> levels to this column. These levels are the temperatures taken from the wikipedia page. We then convert the factor levels, first to a <code>string</code>, and then to a <code>numeric</code> and add a new column for the difference of the recorded monthly average and the historic monthly average</p>
+<pre class="r"><code># taken from https://de.wikipedia.org/wiki/Zeitreihe_der_Lufttemperatur_in_Deutschland#Durchschnittswerte_.C3.BCber_unterschiedliche_Zeitperioden
+historicMonthlyAverages &lt;- c(-0.4, 0.3, 3.6, 7.7, 12.4, 15.5, 17.3, 16.6, 13.3, 8.6, 4.0, 0.9)
+
+monthlyAverages &lt;- cbind(monthlyAverages, mHistoricMonthlyAverage)
+
+historicMonthlyAveragesFactor &lt;- factor(historicMonthlyAverages)
+levels(monthlyAverages$mHistoricMonthlyAverage) &lt;- historicMonthlyAveragesFactor
+monthlyAverages$mHistoricMonthlyAverage &lt;- as.character(monthlyAverages$mHistoricMonthlyAverage)
+monthlyAverages$mHistoricMonthlyAverage &lt;- as.numeric(monthlyAverages$mHistoricMonthlyAverage)
+
+deviationFromNormal &lt;- -1*(monthlyAverages$mHistoricMonthlyAverage - monthlyAverages$Wert)
+monthlyAverages &lt;- cbind(monthlyAverages, deviationFromNormal)</code></pre>
+<pre class="r"><code>NA
+Encoding(legendLabel) &lt;- &quot;UTF-8&quot;
+g &lt;- ggplot(data=monthlyAverages) +
+  scale_color_gradient2(low=&quot;blue&quot;, high=&quot;red&quot;, mid = &quot;white&quot;, midpoint = 0) +
+  geom_point(shape = 15) +
+  aes(x=mMonth, y=mYear, color = deviationFromNormal) +
+  scale_y_discrete(name = &quot;Year&quot;,
+                   breaks=seq(from=1950, to=2020, by=5)) +
+  labs(colour = legendLabel)
+  theme(legend.title = element_text(&quot;Monthly Average Temperature by Year&quot;))</code></pre>
+<pre><code>## List of 1
+##  $ legend.title:List of 10
+##   ..$ family    : chr &quot;Monthly Average Temperature by Year&quot;
+##   ..$ face      : NULL
+##   ..$ colour    : NULL
+##   ..$ size      : NULL
+##   ..$ hjust     : NULL
+##   ..$ vjust     : NULL
+##   ..$ angle     : NULL
+##   ..$ lineheight: NULL
+##   ..$ margin    : NULL
+##   ..$ debug     : NULL
+##   ..- attr(*, &quot;class&quot;)= chr [1:2] &quot;element_text&quot; &quot;element&quot;
+##  - attr(*, &quot;class&quot;)= chr [1:2] &quot;theme&quot; &quot;gg&quot;
+##  - attr(*, &quot;complete&quot;)= logi FALSE
+##  - attr(*, &quot;validate&quot;)= logi TRUE</code></pre>
+<pre class="r"><code>g</code></pre>
+<p><img src="2016-09-03-temperature-fun-hamburg_files/figure-html/monthly-averages-by-year-1.png" /><!-- --></p>
+</div>
+<div id="dewpoint-by-year" class="section level2">
+<h2>Dewpoint by year</h2>
+<pre class="r"><code>dwdTemps &lt;- filter(dwdHamburg, Element == &quot;Lufttemperatur Tagesmittel&quot;)
+dwdHumidity &lt;- filter(dwdHamburg, Element == &quot;Relative Luftfeuchte&quot;)
+annualAverageTemps &lt;- aggregate(Wert~mYear, data = dwdTemps, FUN=mean, simplify = F)
+annualAverageTemps$Wert &lt;- as.numeric(annualAverageTemps$Wert)
+annualAverageTemps$Temp &lt;- annualAverageTemps$Wert
+
+annualAverageHumidities &lt;- aggregate(Wert~mYear, data = dwdHumidity, FUN=mean, simplify = F)
+annualAverageHumidities$Humidity &lt;- as.numeric(annualAverageHumidities$Wert)
+Humidity &lt;- as.numeric(annualAverageHumidities$Wert)
+
+annualAverageHumiditiesAndTemps &lt;- cbind(annualAverageTemps, Humidity)
+
+annualAverageHumiditiesAndTemps$dewPoint &lt;- humidity.to.dewpoint(
+  rh=annualAverageHumiditiesAndTemps$Humidity,
+  t=annualAverageHumiditiesAndTemps$Temp,
+  temperature.metric = &quot;celsius&quot;)
+g &lt;- ggplot(data=annualAverageHumiditiesAndTemps) +
+  geom_point() +
+  aes(x=mYear, y=dewPoint) +
+  coord_fixed(ratio = 5) +
+NA
+  scale_x_discrete(name = &quot;Year&quot;,
+                   breaks=seq(from=1950, to=2020, by=5)) +
+  ggtitle(&quot;Average annual 1952-2015&quot;)
+g</code></pre>
+<p><img src="2016-09-03-temperature-fun-hamburg_files/figure-html/dewpoint-by-year-1.png" /><!-- --></p>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+$(document).ready(function () {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+});
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
